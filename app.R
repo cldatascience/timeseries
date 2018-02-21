@@ -17,6 +17,8 @@ dailymet <- read.csv(
   stringsAsFactors = FALSE)
 
 dailymet$date <- as.Date(dailymet$date)
+dailymet$year <- year(dailymet$date)
+dailymet$month<- month(dailymet$date)
 
 monthlymet <-read.csv(
   file="Temp_HARV_Monthly_09_11.csv",
@@ -27,7 +29,7 @@ monthlymet$date <- as.Date(monthlymet$datetime)
 
 ui <- navbarPage("NEON Time Series",
                  theme = shinytheme("flatly"),
-                 tabPanel("Daily",
+                 tabPanel("Daily air temperature",
                           sidebarLayout(
                             sidebarPanel(
                               dateRangeInput("daterange1", "Date range:",
@@ -47,7 +49,7 @@ ui <- navbarPage("NEON Time Series",
                             )
                           )
                  ),
-                 tabPanel("Montly",
+                 tabPanel("Monthly air temperature",
                           sidebarLayout(
                             sidebarPanel(
                               dateRangeInput("daterange2", "Date range:",
@@ -65,10 +67,19 @@ ui <- navbarPage("NEON Time Series",
                             )
                           )
                  ),
-                 navbarMenu("Yearly",
-                            tabPanel("Facets",
-                                     plotOutput("facets")
-                            ))
+                 navbarMenu("Facets",
+                            tabPanel("Temperature by year",
+                                     plotOutput("yearfacets")
+                            ),
+                            tabPanel("Yearly mean temperature",
+                                     plotOutput("yearlymean")
+                            ),
+                            tabPanel("Temperature by month",
+                                     plotOutput("monthfacets")
+                            ),tabPanel("Monthly mean temperature",
+                                       plotOutput("monthlymean")
+                            )
+                            )
                  
 )
 
@@ -107,15 +118,46 @@ server <- function(input, output, session) {
       theme_economist()
   })
   
-  output$facets <- renderPlot({
+  output$yearfacets <- renderPlot({
     ggplot(dailymet, aes(jd, airt)) +
       geom_point() +
-      ggtitle("Air Temperature\n NEON Harvard Forest Field Site") +
+      ggtitle("Air Temperature by Year\nNEON Harvard Forest Field Site") +
       xlab("Julian Day") + ylab("Temperature (C)") +
       theme(plot.title = element_text(lineheight=.8, face="bold",
                                       size = 20)) +
       theme_economist() +
       facet_grid(. ~ year)
+  })
+  
+  output$monthfacets <- renderPlot({
+    ggplot(dailymet, aes(jd, airt)) +
+      geom_point() +
+      ggtitle("Air Temperature by Month\nNEON Harvard Forest Field Site") +
+      xlab("Julian Day") + ylab("Temperature (C)") +
+      theme(plot.title = element_text(lineheight=.8, face="bold",
+                                      size = 20)) +
+      theme_economist() +
+      facet_grid(. ~ month)
+  })
+  
+  output$yearlymean <- renderPlot({
+    ggplot(dailymet, aes(as.factor(year), airt)) +
+      geom_boxplot() +
+      ggtitle("Yearly Mean Air Temperature\nNEON Harvard Forest Field Site") +
+      xlab("Year") + ylab("Temperature (C)") +
+      theme(plot.title = element_text(lineheight=.8, face="bold",
+                                      size = 20)) +
+      theme_economist()
+  })
+  
+  output$monthlymean <- renderPlot({
+    ggplot(dailymet, aes(as.factor(month), airt)) +
+      geom_boxplot() +
+      ggtitle("Monthly Mean Air Temperature\nNEON Harvard Forest Field Site") +
+      xlab("Month") + ylab("Temperature (C)") +
+      theme(plot.title = element_text(lineheight=.8, face="bold",
+                                      size = 20)) +
+      theme_economist()
   })
 }
 
