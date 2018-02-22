@@ -12,6 +12,8 @@ library(ggplot2)
 library(dplyr)
 library(shinythemes)
 library(ggthemes)
+library(fpp2)
+
 dailymet <- read.csv(
   file="Met_HARV_Daily_2009_2011.csv",
   stringsAsFactors = FALSE)
@@ -26,6 +28,17 @@ monthlymet <-read.csv(
 )
 
 monthlymet$date <- as.Date(monthlymet$datetime)
+
+dailyts <- ts(dailymet$airt, start = c(2009, 1), frequency = 365)
+dailysnaive <- snaive(dailyts)
+date <- seq(as.Date("2012-01-01"), length = 730, by = "days")
+dsn_mean <- as.data.frame(as.numeric(dailysnaive$mean))
+dsn_pred <- cbind(date,dsn_mean) 
+colnames(dsn_pred) <- c("date","airt")
+dsn_pred <- mutate(dsn_pred,status="predicted")
+observed <- select(dailymet,date,airt) %>% 
+  mutate(status="observed")
+dsn_pred <- rbind(dsn_pred,observed)
 
 ui <- navbarPage("NEON Time Series",
                  theme = shinytheme("flatly"),
@@ -49,7 +62,20 @@ ui <- navbarPage("NEON Time Series",
                             )
                           )
                  ),
-                 tabPanel("Monthly air temperature",
+                 navbarMenu("Facets",
+                            tabPanel("Temperature by year",
+                                     plotOutput("yearfacets")
+                            ),
+                            tabPanel("Yearly mean temperature",
+                                     plotOutput("yearlymean")
+                            ),
+                            tabPanel("Temperature by month",
+                                     plotOutput("monthfacets")
+                            ),tabPanel("Monthly mean temperature",
+                                       plotOutput("monthlymean")
+                            )
+                 ),
+                 tabPanel("Forecast",
                           sidebarLayout(
                             sidebarPanel(
                               dateRangeInput("daterange2", "Date range:",
@@ -66,20 +92,8 @@ ui <- navbarPage("NEON Time Series",
                               plotOutput("plotmonthly")
                             )
                           )
-                 ),
-                 navbarMenu("Facets",
-                            tabPanel("Temperature by year",
-                                     plotOutput("yearfacets")
-                            ),
-                            tabPanel("Yearly mean temperature",
-                                     plotOutput("yearlymean")
-                            ),
-                            tabPanel("Temperature by month",
-                                     plotOutput("monthfacets")
-                            ),tabPanel("Monthly mean temperature",
-                                       plotOutput("monthlymean")
-                            )
-                            )
+                 )
+                 
                  
 )
 
@@ -104,19 +118,31 @@ server <- function(input, output, session) {
   })
   
   output$plotmonthly <- renderPlot({
-    startTime <- as.Date(input$daterange2[1])
-    endTime <- as.Date(input$daterange2[2])
-    startend <- c(startTime,endTime)
-    
-    ggplot(monthlymet,aes(date,mean_airt)) + 
+
+    ggplot(dsn_pred,aes(date,airt,color=status)) + 
       geom_point() +
-      ggtitle("Mean Air Temperature 2009-2011\nNEON Harvard Forest Field Site") +
+      ggtitle("Forecasts using Seasonal Naive Model\n") +
       xlab("Date") + ylab("Mean Air Temperature (C)") +
-      (scale_x_date(limits=startend,
+      (scale_x_date(#limits=startend,
                     breaks=date_breaks("6 months"),
                     labels=date_format("%b %y"))) +
       theme_economist()
   })
+  
+  # output$plotmonthly <- renderPlot({
+  #   startTime <- as.Date(input$daterange2[1])
+  #   endTime <- as.Date(input$daterange2[2])
+  #   startend <- c(startTime,endTime)
+  #   
+  #   ggplot(monthlymet,aes(date,mean_airt)) + 
+  #     geom_point() +
+  #     ggtitle("Mean Air Temperature 2009-2011\nNEON Harvard Forest Field Site") +
+  #     xlab("Date") + ylab("Mean Air Temperature (C)") +
+  #     (scale_x_date(limits=startend,
+  #                   breaks=date_breaks("6 months"),
+  #                   labels=date_format("%b %y"))) +
+  #     theme_economist()
+  # })
   
   output$yearfacets <- renderPlot({
     ggplot(dailymet, aes(jd, airt)) +
