@@ -15,30 +15,17 @@ library(ggthemes)
 library(fpp2)
 
 dailymet <- read.csv(
-  file="Met_HARV_Daily_2009_2011.csv",
+  file="data/dailymet.csv",
   stringsAsFactors = FALSE)
 
 dailymet$date <- as.Date(dailymet$date)
 dailymet$year <- year(dailymet$date)
 dailymet$month<- month(dailymet$date)
 
-monthlymet <-read.csv(
-  file="Temp_HARV_Monthly_09_11.csv",
-  stringsAsFactors=FALSE
-)
-
-monthlymet$date <- as.Date(monthlymet$datetime)
-
-dailyts <- ts(dailymet$airt, start = c(2009, 1), frequency = 365)
-dailysnaive <- snaive(dailyts)
-date <- seq(as.Date("2012-01-01"), length = 730, by = "days")
-dsn_mean <- as.data.frame(as.numeric(dailysnaive$mean))
-dsn_pred <- cbind(date,dsn_mean) 
-colnames(dsn_pred) <- c("date","airt")
-dsn_pred <- mutate(dsn_pred,status="predicted")
-observed <- select(dailymet,date,airt) %>% 
-  mutate(status="observed")
-dsn_pred <- rbind(dsn_pred,observed)
+dsn_pred <- read.csv(
+  file="data/dsn_pred.csv",
+  stringsAsFactors = FALSE)
+dsn_pred$date <- as.Date(dsn_pred$date)
 
 ui <- navbarPage("NEON Time Series",
                  theme = shinytheme("flatly"),
